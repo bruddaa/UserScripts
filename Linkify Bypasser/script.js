@@ -12,6 +12,7 @@
 
 (function() {
     'use strict';
+
     function handleFirstRedirect() {
         const unlockButton = document.getElementById('unlockgo');
         if (!unlockButton) return null;
@@ -47,17 +48,15 @@
     }
 
     function bypassRedirects() {
-        if (document.querySelector('tgs-player')) {
-            const finalUrl = handleSecondRedirect();
-            if (finalUrl) {
-                window.location.href = finalUrl;
-            }
-        }
-        else {
-            const nextUrl = handleFirstRedirect();
-            if (nextUrl) {
-                window.location.href = nextUrl;
-            }
+        const secondRedirectUrl = handleSecondRedirect();
+        const firstRedirectUrl = handleFirstRedirect();
+
+        const finalUrl = secondRedirectUrl || firstRedirectUrl;
+        if (finalUrl) {
+            console.log("Redirecting to:", finalUrl);
+            window.location.href = finalUrl;
+        } else {
+            console.error("No redirect URL found.");
         }
     }
 
