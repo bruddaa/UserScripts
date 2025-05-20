@@ -4,7 +4,7 @@
 // @version      1.0
 // @description  Automatically bypasses all "go.linkify.ru" redirects to go directly to the final URL
 // @author       Brudda
-// @icon         https://cdn-icons-png.flaticon.com/512/25/25614.png
+// @icon         https://raw.githubusercontent.com/bruddaa/UserScripts/refs/heads/main/Linkify%20Bypasser/lb_logo.png
 // @match        *://go.linkify.ru/*
 // @grant        none
 // @run-at       document-end
