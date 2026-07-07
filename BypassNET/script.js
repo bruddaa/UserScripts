@@ -2,7 +2,7 @@
 // @name         BypassNET
 // @namespace    https://github.com/bruddaa/
 // @version      1.2
-// @description  Bypasses various link lockers (Some sites may require waiting). See all supported sites: https://
+// @description  Bypasses various link lockers (Some sites may require waiting). See all supported sites: https://github.com/bruddaa/UserScripts/blob/main/BypassNET/README.md#supported-sites
 // @icon         https://raw.githubusercontent.com/bruddaa/UserScripts/refs/heads/main/BypassNET/lb_logo.png
 // @author       Brudda
 // @match        *://bstshrt.com/u/*
