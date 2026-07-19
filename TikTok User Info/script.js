@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok User Info
 // @namespace    https://github.com/bruddaa/
-// @version      2.0
+// @version      2.3
 // @description  Additional user info from TikTok profiles
 // @author       Brudda
 // @icon         https://raw.githubusercontent.com/bruddaa/UserScripts/refs/heads/main/TikTok%20User%20Info/tt_logo.png
@@ -9,6 +9,8 @@
 // @grant        GM_download
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @connect      user.tikmatrix.com
 // ==/UserScript==
 
 (function () {
@@ -113,27 +115,19 @@
         }
     }
 
-    // ── Find the right DOM node to insert after ──────────────
-
     function findAnchor() {
-        // 1) The <h2 data-e2e="user-bio"> lives inside the text
-        //    container that also holds the share links.  Its
-        //    parent is the container we want to insert after.
         const bio = document.querySelector('h2[data-e2e="user-bio"]');
         if (bio && bio.parentElement) return bio.parentElement;
 
-        // 2) Fallback: match the semantic class fragment
         const el = document.querySelector('[class*="CreatorPageHeaderTextContainer"]');
         if (el) return el;
 
-        // 3) Older layout fallback
         const old = document.querySelector('[class*="DivShareTitleContainer"]');
         if (old) return old;
 
         return null;
     }
 
-    // ── Build the info box ───────────────────────────────────
 
     function buildBox(user, stats) {
         const hasAvatar = !!user.avatarLarger;
@@ -145,9 +139,13 @@
 
         const rows = [
             ['User ID',            user.id || 'N/A'],
-            ['Region',             user.region ? user.region + ' ' + flag(user.region) : 'N/A'],
+            ['Current Country',    '<span id="tm-current-country" style="display:inline-flex;align-items:center;gap:4px;">'
+                                  + '<span class="tm-loading-dots">...</span></span>'],
+            ['Creation Country',   '<span id="tm-creation-country" style="display:inline-flex;align-items:center;gap:4px;">'
+                                  + '<span class="tm-loading-dots">...</span></span>'],
             ['Language',           lang(user.language)],
             ['Account Created',    ts(user.createTime)],
+            ['SecUid',             user.secUid],
             ['Friend Count',       stats && stats.friendCount != null ? stats.friendCount : 'N/A'],
             ['Is Seller',          bool(user.ttSeller)],
             ['Is Organization',    bool(user.isOrganization)],
@@ -174,6 +172,10 @@
             + 'font-family:Proxima Nova,Arial,sans-serif;font-size:14px;color:#161823;'
             + 'border:1px solid #e3e3e3;position:relative;'
             + '">'
+            + '<style>'
+            + '.tm-loading-dots { animation: tm-pulse 1s ease-in-out infinite; color:#808080; }'
+            + '@keyframes tm-pulse { 0%,100%{ opacity:0.3; } 50%{ opacity:1; } }'
+            + '</style>'
             + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
             + '<h3 style="margin:0;font-size:16px;font-weight:700;">Additional User Information</h3>'
             + dlBtn
@@ -192,14 +194,68 @@
             + '</div>';
     }
 
+    // ── Fetch region data via GM_xmlhttpRequest (bypasses CSP) ─
+
+    function fetchRegion(username) {
+        if (!username) return;
+
+        var box = document.getElementById(BOX_ID);
+        if (!box) return;
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'https://user.tikmatrix.com/api/region?username=' + encodeURIComponent(username),
+            onload: function (response) {
+                var currentEl = document.getElementById('tm-current-country');
+                var creationEl = document.getElementById('tm-creation-country');
+
+                try {
+                    var data = JSON.parse(response.responseText);
+
+                    if (data.ok) {
+                        if (data.region && currentEl) {
+                            currentEl.innerHTML = (data.region.flag || '') + ' '
+                                + (data.region.name || data.region.code || 'N/A');
+                            currentEl.style.color = '#161823';
+                        } else if (currentEl) {
+                            currentEl.textContent = 'N/A';
+                            currentEl.style.color = '#808080';
+                        }
+
+                        if (data.lockedRegion && creationEl) {
+                            creationEl.innerHTML = (data.lockedRegion.flag || '') + ' '
+                                + (data.lockedRegion.name || data.lockedRegion.code || 'N/A');
+                            creationEl.style.color = '#161823';
+                        } else if (creationEl) {
+                            creationEl.textContent = 'N/A';
+                            creationEl.style.color = '#808080';
+                        }
+                    } else {
+                        if (currentEl) { currentEl.textContent = 'N/A'; currentEl.style.color = '#808080'; }
+                        if (creationEl) { creationEl.textContent = 'N/A'; creationEl.style.color = '#808080'; }
+                    }
+                } catch (e) {
+                    console.error('[TT UserInfo] Region parse error:', e);
+                    if (currentEl) { currentEl.textContent = 'N/A'; currentEl.style.color = '#808080'; }
+                    if (creationEl) { creationEl.textContent = 'N/A'; creationEl.style.color = '#808080'; }
+                }
+            },
+            onerror: function (err) {
+                console.error('[TT UserInfo] Region API error:', err);
+                var currentEl = document.getElementById('tm-current-country');
+                var creationEl = document.getElementById('tm-creation-country');
+                if (currentEl) { currentEl.textContent = 'N/A'; currentEl.style.color = '#808080'; }
+                if (creationEl) { creationEl.textContent = 'N/A'; creationEl.style.color = '#808080'; }
+            }
+        });
+    }
+
     // ── Insert / refresh the info box ────────────────────────
 
     function render() {
-        // Always remove a previous box first
         var old = document.getElementById(BOX_ID);
         if (old) old.remove();
 
-        // Only run on profile pages
         if (!location.pathname.match(/^\/@[^/]+/)) return;
 
         var data = extractUser();
@@ -227,13 +283,15 @@
             });
         }
 
+        // Fetch region data
+        var apiUsername = data.user.uniqueId || location.pathname.split('@')[1];
+        if (apiUsername) apiUsername = apiUsername.split(/[/?#]/)[0];
+        fetchRegion(apiUsername);
+
         GM_setValue('lastUsername', data.user.uniqueId || '');
     }
 
     // ── Detect SPA navigation ────────────────────────────────
-    // TikTok is a single-page app — clicking a profile doesn't
-    // trigger a full page load.  We watch the URL via a
-    // MutationObserver so we can re-render on every navigation.
 
     var prevHref = location.href;
 
