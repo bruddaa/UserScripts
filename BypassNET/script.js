@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         BypassNET
+// @license      MIT
 // @namespace    https://github.com/bruddaa/
-// @version      1.2
-// @description  Bypasses various link lockers (Some sites may require waiting). See all supported sites: https://github.com/bruddaa/UserScripts/blob/main/BypassNET/README.md#supported-sites
+// @version      1.3
+// @description  Bypasses various link lockers (Some sites may require waiting). See all supported sites: https://
 // @icon         https://raw.githubusercontent.com/bruddaa/UserScripts/refs/heads/main/BypassNET/lb_logo.png
 // @author       Brudda
 // @match        *://bstshrt.com/u/*
@@ -41,6 +42,9 @@
 // @match        *://linkzy.space/u/*
 // @match        *://go.linkify.ru/*
 // @match        *://linksterra.com/l/*
+// @match        *://sub4unlock.in/*
+// @match        *://subs4unlock.id/*
+// @match        *://*.robloxscripts.gg/social/*
 // @connect      api.link-unlock.com
 // @connect      api.rekonise.com
 // @connect      zjzdbkmhxbwcznwvmfsg.supabase.co
@@ -49,48 +53,48 @@
 // @grant        none
 // @noframes
 // ==/UserScript==
-
+ 
 (function () {
     'use strict';
     const hostname = window.location.hostname;
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-
+ 
     // ==========================================
     // BSTLAR.COM BYPASS LOGIC
     // ==========================================
     if (hostname.includes('bstlar.com')) {
         const slug = window.location.pathname.replace(/^\//, '');
         if (!slug) return;
-
+ 
         console.log("[Bypass] Bstlar: Waiting for Cloudflare check to finish...");
-
+ 
         const cfCheck = setInterval(async () => {
             const input = document.querySelector('input#link_action_id');
             if (!input) return;
-
+ 
             clearInterval(cfCheck);
             const linkActionId = input.value;
-
+ 
             try {
                 const getUrl = `https://bstlar.com/api/link?url=${encodeURIComponent(slug)}&link_action_id=${linkActionId}`;
                 const getRes = await fetch(getUrl, { credentials: 'include' });
                 const getData = await getRes.json();
-
+ 
                 if (!getData.id) {
                     return console.error("[Bypass] Bstlar: Failed to get link ID from API.", getData);
                 }
-
+ 
                 const linkId = getData.id;
-
+ 
                 const postRes = await fetch('https://bstlar.com/api/link-completed', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({ link_id: linkId, link_action_id: linkActionId })
                 });
-
+ 
                 const postData = await postRes.json();
-
+ 
                 if (postData.destination_url) {
                     console.log("[Bypass] Bstlar: ✅ Unlocked successfully!");
                     window.stop();
@@ -104,16 +108,16 @@
         }, 500);
         return;
     }
-
+ 
     // ==========================================
     // RISUB.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('risub.com')) {
         let bypassed = false;
-
+ 
         function extractAndRedirect() {
             if (bypassed) return true;
-
+ 
             // Look for the final link element
             const finalLink = document.querySelector('a.final-link');
             if (finalLink) {
@@ -129,19 +133,19 @@
             }
             return false;
         }
-
+ 
         // Try immediately if DOM is already loaded
         if (document.readyState !== 'loading') {
             if (extractAndRedirect()) return;
         }
-
+ 
         // Watch for the link to appear
         const observer = new MutationObserver(() => {
             if (extractAndRedirect()) {
                 observer.disconnect();
             }
         });
-
+ 
         // Start observing once DOM is ready
         function startObserver() {
             if (extractAndRedirect()) return;
@@ -154,13 +158,13 @@
                 });
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', startObserver, { once: true });
         } else {
             startObserver();
         }
-
+ 
         // Fallback: periodically check for the link (in case the observer misses it)
         const intervalCheck = setInterval(() => {
             if (extractAndRedirect()) {
@@ -168,23 +172,23 @@
                 observer.disconnect();
             }
         }, 500);
-
+ 
         // Clean up interval after 30 seconds to prevent memory leaks
         setTimeout(() => {
             clearInterval(intervalCheck);
             observer.disconnect();
         }, 30000);
-
+ 
         return;
     }
-
+ 
     // ==========================================
     // LOCKR.NET BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('lockr.net')) {
         const slug = window.location.pathname.split('/').filter(Boolean)[0];
         if (!slug) return;
-
+ 
         async function bypassLockr() {
             try {
                 console.log("[Bypass] Lockr: Fetching view data to get token...");
@@ -192,19 +196,19 @@
                     credentials: 'include'
                 });
                 const viewData = await viewRes.json();
-
+ 
                 const token = viewData?.data?.token;
                 const serverWait = viewData?.data?.waitingTimeSeconds || 0;
-
+ 
                 if (!token) {
                     return console.error("[Bypass] Lockr: Failed to get token from API.", viewData);
                 }
-
+ 
                 // Wait at least 20 seconds, or longer if the server explicitly specifies it
                 const waitTime = Math.max(20, serverWait);
                 console.log(`[Bypass] Lockr: Token acquired. Waiting ${waitTime} seconds for server timer...`);
                 await sleep(waitTime * 1000);
-
+ 
                 // Try up to 3 times with 5-second intervals
                 for (let i = 0; i < 3; i++) {
                     console.log(`[Bypass] Lockr: Attempting unlock (${i + 1}/3)...`);
@@ -212,48 +216,48 @@
                         credentials: 'include'
                     });
                     const unlockData = await unlockRes.json();
-
+ 
                     if (unlockData?.data?.target) {
                         console.log("[Bypass] Lockr: ✅ Unlocked successfully!", unlockData.data.target);
                         window.stop();
                         window.location.replace(unlockData.data.target);
                         return;
                     }
-
+ 
                     if (i < 2) {
                         console.log("[Bypass] Lockr: Target not ready yet, waiting 5 seconds...");
                         await sleep(5000);
                     }
                 }
-
+ 
                 console.error("[Bypass] Lockr: ❌ Failed to unlock after 3 attempts.");
             } catch (err) {
                 console.error("[Bypass] Lockr: Network error.", err);
             }
         }
-
+ 
         bypassLockr();
         return;
     }
-
+ 
     // ==========================================
     // YTSUBME.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('ytsubme.com')) {
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('urlid');
-
+ 
         if (!code) return;
-
+ 
         async function bypassYtSubMe() {
             try {
                 console.log("[Bypass] YtSubMe: Fetching link data from API...");
                 const res = await fetch(`https://www.ytsubme.com/dashboard/api/s2u_links.php?mode=s2uGetLink&code=${code}`);
                 const data = await res.json();
-
+ 
                 // The destination URL is in msg.target (and also return_url)
                 const destUrl = data.msg?.target || data.return_url;
-
+ 
                 if (destUrl) {
                     // Fix escaped slashes (https:\/\/test.com -> https://test.com)
                     const url = destUrl.replace(/\\\//g, '/');
@@ -267,17 +271,17 @@
                 console.error("[Bypass] YtSubMe: Network error.", err);
             }
         }
-
+ 
         bypassYtSubMe();
         return;
     }
-
+ 
     // ==========================================
     // SOCIALWOLVEZ.COM (SCWZ.ME) BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('socialwolvez.com')) {
         const regex = /"url":"(https?:[^"\\]+)"/;
-
+ 
         function extractAndRedirect(raw) {
             const match = raw?.match(regex);
             if (match?.[1]) {
@@ -292,11 +296,11 @@
             }
             return false;
         }
-
+ 
         // Hook Next.js data stream
         function hookPush() {
             if (typeof self.__next_f?.push !== 'function') return false;
-
+ 
             const orig = self.__next_f.push;
             self.__next_f.push = function (chunk) {
                 const raw = (Array.isArray(chunk) && typeof chunk[1] === 'string') ? chunk[1] : JSON.stringify(chunk);
@@ -304,7 +308,7 @@
             };
             return true;
         }
-
+ 
         if (!hookPush()) {
             try {
                 Object.defineProperty(self, '__next_f', {
@@ -314,14 +318,14 @@
                 });
             } catch (_) {}
         }
-
+ 
         // Fallback: Scan scripts if the chunk was pushed before the script injected
         function fallback() {
             for (const s of document.querySelectorAll('script')) {
                 if (extractAndRedirect(s.textContent)) return;
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', fallback, { once: true });
         } else {
@@ -329,7 +333,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // BOOST.INK / BST.GG / BST.WTF / BOOO.ST BYPASS LOGIC
     // ==========================================
@@ -355,21 +359,21 @@
             }
             return false;
         }
-
+ 
         // Try immediately in case the script tag is already parsed
         if (extractAndRedirect()) return;
-
+ 
         // Watch for the script tag to be injected into the DOM
         const observer = new MutationObserver(() => {
             if (extractAndRedirect()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Safety cleanup after 10 seconds
         setTimeout(() => observer.disconnect(), 10000);
         return;
     }
-
+ 
     // ==========================================
     // LINK2UNLOCK.COM BYPASS LOGIC
     // ==========================================
@@ -377,13 +381,13 @@
         function extractAndRedirect() {
             const appDiv = document.getElementById('app');
             if (!appDiv || !appDiv.dataset.page) return false;
-
+ 
             try {
                 // The data-page attribute is HTML-entity encoded (e.g., &quot; instead of ")
                 const div = document.createElement('div');
                 div.innerHTML = appDiv.dataset.page;
                 const data = JSON.parse(div.textContent);
-
+ 
                 // The destination URL is stored in the finish array
                 if (data.props?.link?.finish?.[0]?.url) {
                     let url = data.props.link.finish[0].url.replace(/\\\//g, '/');
@@ -397,40 +401,40 @@
             }
             return false;
         }
-
+ 
         // Try immediately in case the DOM is already loaded
         if (extractAndRedirect()) return;
-
+ 
         // Watch for the #app div to be inserted into the DOM
         const observer = new MutationObserver(() => {
             if (extractAndRedirect()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Safety cleanup after 10 seconds
         setTimeout(() => observer.disconnect(), 10000);
         return;
     }
-
-
-
+ 
+ 
+ 
     // ==========================================
     // SUBFORUNLOCK.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('subforunlock.com')) {
         const slug = window.location.pathname.replace(/^\/|\/$/g, '');
         if (!slug) return;
-
+ 
         async function bypassSubForUnlock() {
             try {
                 // The server checks session age. The site waits 30s, we try at 15s first.
                 console.log("[Bypass] SubForUnlock: Waiting 15 seconds for session to mature...");
                 await sleep(15000);
-
+ 
                 let res = await fetch(`https://subforunlock.com/api/v1/custom_url/${slug}`, {
                     credentials: 'include'
                 });
-
+ 
                 // If 401, wait the remaining 15s to match the site's official 30s delay
                 if (res.status === 401) {
                     console.log("[Bypass] SubForUnlock: 401 detected, waiting 15 more seconds and retrying...");
@@ -439,13 +443,13 @@
                         credentials: 'include'
                     });
                 }
-
+ 
                 if (!res.ok) {
                     return console.error("[Bypass] SubForUnlock: API failed.", res.status);
                 }
-
+ 
                 const data = await res.json();
-
+ 
                 if (data.destination_url) {
                     // Fix escaped slashes (https:\/\/test.com -> https://test.com)
                     const url = data.destination_url.replace(/\\\//g, '/');
@@ -459,7 +463,7 @@
                 console.error("[Bypass] SubForUnlock: Network error.", err);
             }
         }
-
+ 
         bypassSubForUnlock();
         return;
     }
@@ -468,14 +472,14 @@
     // ==========================================
     else if (hostname.includes('subunlock.com')) {
         const pathname = window.location.pathname;
-
+ 
         // Step 1: Redirect from /slug to /slug/wait
         if (!pathname.endsWith('/wait')) {
             console.log("[Bypass] SubUnlock: Redirecting to /wait...");
             window.location.replace(window.location.href + '/wait');
             return;
         }
-
+ 
         // Step 2: On /wait page, find the hardcoded destination URL
         function extractAndRedirect() {
             const links = document.querySelectorAll('a');
@@ -489,19 +493,19 @@
             }
             return false;
         }
-
+ 
         if (extractAndRedirect()) return;
-
+ 
         const observer = new MutationObserver(() => {
             if (extractAndRedirect()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Clean up observer after 10 seconds
         setTimeout(() => observer.disconnect(), 10000);
         return;
     }
-
+ 
     // ==========================================
     // UNLOCKLINK.WEB.ID BYPASS LOGIC
     // ==========================================
@@ -518,27 +522,23 @@
             }
             return false;
         }
-
+ 
         // Try immediately in case the script is already in the DOM
         if (bypassUnlockLink()) return;
-
+ 
         // Watch for the script tag to be parsed into the DOM
         const observer = new MutationObserver(() => {
             if (bypassUnlockLink()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Fallback cleanup after 10 seconds
         setTimeout(() => observer.disconnect(), 10000);
         return;
     }
-
-
-    // ==========================================
-    // SUBTOUNLOCK.COM BYPASS LOGIC (Simplified)
-    // ==========================================
+ 
     
-
+ 
     // ==========================================
     // SUB2UNLOCK.ID BYPASS LOGIC
     // ==========================================
@@ -546,11 +546,11 @@
         function extractAndRedirect() {
             const textarea = document.querySelector('textarea[name="link"]');
             if (!textarea || !textarea.value) return false;
-
+ 
             try {
                 const data = JSON.parse(textarea.value);
                 if (!data.original) return false;
-
+ 
                 const params = new URLSearchParams(data.original);
                 for (const [key, value] of params.entries()) {
                     if (key.startsWith('lnk')) {
@@ -558,7 +558,7 @@
                         // 2. atob() decodes the base64 into a URL-encoded string (e.g. https%3A%2F%...)
                         // 3. decodeURIComponent handles the second layer (e.g. %3A -> :)
                         const url = decodeURIComponent(atob(value));
-
+ 
                         if (url && /^https?:\/\//i.test(url)) {
                             console.log("[Bypass] Sub2Unlock.id: ✅ Unlocked successfully!", url);
                             window.stop();
@@ -572,27 +572,27 @@
             }
             return false;
         }
-
+ 
         // Try immediately in case the textarea is already in the DOM
         if (extractAndRedirect()) return;
-
+ 
         // Otherwise, watch for it to spawn
         const observer = new MutationObserver(() => {
             if (extractAndRedirect()) observer.disconnect();
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Safety cleanup after 10 seconds
         setTimeout(() => observer.disconnect(), 10000);
         return;
     }
-
+ 
     // ==========================================
     // SUB4UNLOCK.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('sub4unlock.com')) {
         const pathname = window.location.pathname;
-
+ 
         // Step 1: Redirect from /S/slug to /LP/LPD.php?id=slug
         if (pathname.startsWith('/S/')) {
             const slug = pathname.replace(/^\/S\//, '');
@@ -602,7 +602,7 @@
             }
             return;
         }
-
+ 
         // Step 2: On LPD page, extract URL from fileunlock() and redirect
         if (pathname.includes('LPD.php')) {
             function extractAndRedirect() {
@@ -617,9 +617,9 @@
                 }
                 return false;
             }
-
+ 
             if (extractAndRedirect()) return;
-
+ 
             const observer = new MutationObserver(() => {
                 if (extractAndRedirect()) observer.disconnect();
             });
@@ -627,7 +627,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // BOOSTYLINK.COM BYPASS LOGIC
     // ==========================================
@@ -635,48 +635,48 @@
         function bypassBoostylink() {
             const unlockBtn = document.querySelector('.unlock-btn');
             if (!unlockBtn) return;
-
+ 
             const linkId = unlockBtn.dataset.link;
             const snippetId = unlockBtn.dataset.snippet;
             if (!linkId && !snippetId) return;
-
+ 
             // Remove the site's own click handlers from action buttons
             const origBtns = [...document.querySelectorAll('.action-btn[data-linkactionid]')];
             origBtns.forEach(btn => btn.replaceWith(btn.cloneNode(true)));
             const btns = [...document.querySelectorAll('.action-btn[data-linkactionid]')];
-
+ 
             // Prevent resume-pending logic from firing
             localStorage.removeItem('locker_pending_action:' + (linkId || snippetId));
-
+ 
             // No actions → button already enabled
             if (btns.length === 0) {
                 unlockBtn.click();
                 return;
             }
-
+ 
             (async () => {
                 const total = btns.length;
                 let doneCount = 0;
-
+ 
                 const updateProgress = () => {
                     // setProgress() must be defined elsewhere in your script
                     setProgress(doneCount, total);
                 };
-
+ 
                 // Fire all actions concurrently
                 const tasks = btns.map(async (btn) => {
                     const actionId = btn.dataset.linkactionid;
-
+ 
                     // --- Visual: show spinning state ---
                     setBtnPending(btn);
-
+ 
                     // 1. Start the action
                     await fetch('/api/locker_action_start.php', {
                         method: 'POST',
                         credentials: 'same-origin',
                         body: new URLSearchParams({ link_action_id: actionId })
                     });
-
+ 
                     // 2. Complete (with retries)
                     let ok = false;
                     for (let r = 0; r < 15 && !ok; r++) {
@@ -686,7 +686,7 @@
                             body: new URLSearchParams({ link_action_id: actionId })
                         });
                         const d = await res.json();
-
+ 
                         if (d.status === 'ok') {
                             ok = true;
                             setBtnDone(btn);
@@ -703,23 +703,23 @@
                             break;
                         }
                     }
-
+ 
                     if (!ok) {
                         clearBtnPending(btn);
                     }
                     // Note: lockOtherActionButtons is intentionally omitted here –
                     // locking makes no sense when every button is processed in parallel.
                 });
-
+ 
                 // Wait for all actions (success or failure)
                 await Promise.allSettled(tasks);
-
+ 
                 // Original script always triggers unlock at this point
                 console.log("[Bypass] Boostylink: ✅ All actions settled, triggering unlock...");
                 unlockBtn.click();
             })();
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bypassBoostylink, { once: true });
         } else {
@@ -727,7 +727,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // SUB2UNLOCK.PRO BYPASS LOGIC
     // ==========================================
@@ -739,7 +739,7 @@
                 form.submit();
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bypassSub2UnlockPro, { once: true });
         } else {
@@ -747,7 +747,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // SUBS4UNLOCK.NET BYPASS LOGIC
     // ==========================================
@@ -759,19 +759,19 @@
         }
         return;
     }
-
-
+ 
+ 
     // ==========================================
     // HADOSCRIPTS.COM BYPASS LOGIC
     // ==========================================
-
+ 
     else if (hostname.includes('hadoscripts.com')) {
         function findAndRedirect() {
             const scripts = document.querySelectorAll('script');
             for (const script of scripts) {
                 const text = script.textContent;
                 if (!text) continue;
-
+ 
                 // Look for the redirect URL pattern in the unlock button handler
                 const match = text.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
                 if (match && match[1] && !match[1].includes('hadoscripts.com/subpages')) {
@@ -780,7 +780,7 @@
                     return;
                 }
             }
-
+ 
             // Fallback: force complete all steps and click unlock
             const unlockBtn = document.getElementById('unlock');
             if (unlockBtn) {
@@ -794,31 +794,31 @@
                 document.body.appendChild(doneOverride);
             }
         }
-
+ 
         setTimeout(findAndRedirect, 100);
         setTimeout(findAndRedirect, 500);
     }
-
+ 
     // ==========================================
     // REKONISE.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('rekonise.com')) {
         const slug = window.location.pathname.replace(/^\/|\/$/g, '');
         if (!slug) return;
-
+ 
         async function bypassRekonise() {
             try {
                 const getRes = await fetch(`https://api.rekonise.com/social-unlocks/${slug}/`, { credentials: 'include' });
                 const { unlock_token: token } = await getRes.json();
                 if (!token) return console.error("[Bypass] Rekonise: Failed to acquire token.");
-
+ 
                 console.log("[Bypass] Rekonise: Token acquired. Bypassing clock-skew...");
-
+ 
                 for (let i = 1; i <= 5; i++) {
                     if (i > 1) await sleep(7000);
-
+ 
                     const res = await fetch(`https://api.rekonise.com/social-unlocks/${slug}/unlock?token=${token}`, { credentials: 'include' });
-
+ 
                     if (res.ok) {
                         const { url } = await res.json();
                         if (url) {
@@ -828,51 +828,51 @@
                             return;
                         }
                     }
-
+ 
                     if (res.status !== 403) {
                         return console.error(`[Bypass] Rekonise: ❌ Fatal error (HTTP ${res.status}). Stopping.`);
                     }
-
+ 
                     console.log(`[Bypass] Rekonise: ⏳ Attempt ${i} returned 403. Waiting 7 seconds...`);
                 }
-
+ 
                 console.error("[Bypass] Rekonise: ❌ Failed after 5 attempts.");
             } catch (err) {
                 console.error("[Bypass] Rekonise: Network error.", err);
             }
         }
-
+ 
         bypassRekonise();
         return;
     }
-
+ 
     // ==========================================
     // LINK-UNLOCK.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('link-unlock.com')) {
         const slug = window.location.pathname.split('/').filter(Boolean)[0];
         if (!slug) return;
-
+ 
         async function bypassLinkUnlock() {
             try {
                 const getRes = await fetch(`https://api.link-unlock.com/u/${slug}`, { credentials: 'include' });
                 const getData = await getRes.json();
-
+ 
                 if (!getData.success || !getData.unlock?.steps) {
                     return console.error("[Bypass] Link-Unlock: API GET failed.", getData);
                 }
-
+ 
                 const stepIds = getData.unlock.steps.map(s => s.id);
-
+ 
                 const postRes = await fetch(`https://api.link-unlock.com/u/${slug}/complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({ steps: stepIds })
                 });
-
+ 
                 const postData = await postRes.json();
-
+ 
                 if (postData.success && postData.destinationUrl) {
                     window.stop();
                     window.location.replace(postData.destinationUrl);
@@ -883,11 +883,11 @@
                 console.error("[Bypass] Link-Unlock: Network error.", err);
             }
         }
-
+ 
         bypassLinkUnlock();
         return;
     }
-
+ 
     // ==========================================
     // SUB2UNLOCK.ME BYPASS LOGIC
     // ==========================================
@@ -899,7 +899,7 @@
                 form.submit();
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bypassSub2Unlock, { once: true });
         } else {
@@ -907,7 +907,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // SUB2UNLOCK.IO / SUB4UNLOCK.IO BYPASS LOGIC
     // ==========================================
@@ -917,9 +917,9 @@
             if (bypassed) return true;
             const linkBtn = document.querySelector('a.get-link');
             if (!linkBtn) return false;
-
+ 
             const rawHref = linkBtn.getAttribute('href');
-
+ 
             if (rawHref && /^https?:\/\//i.test(rawHref)) {
                 console.log("[Bypass] Sub2Unlock.io: ✅ Found destination URL!", rawHref);
                 window.stop();
@@ -929,20 +929,20 @@
             }
             return false;
         }
-
+ 
         if (extractLink()) return;
-
+ 
         const observer = new MutationObserver(() => {
             if (extractLink()) observer.disconnect();
         });
-
+ 
         function onReady() {
             if (extractLink()) return;
             if (document.body) {
                 observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', onReady, { once: true });
         } else {
@@ -950,20 +950,20 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // SUB2UNLOCK.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('sub2unlock.com')) {
         const slug = window.location.pathname.replace(/^\/|\/$/g, '');
         if (!slug) return;
-
+ 
         async function bypassSub2UnlockCom() {
             try {
                 console.log("[Bypass] Sub2Unlock.com: Fetching unlocked link...");
                 const res = await fetch(`https://api.sub2unlock.com/api/sinks/${slug}`, { credentials: 'include' });
                 const data = await res.json();
-
+ 
                 // Response wraps data inside a "data" object: { data: { unlocked_link: "..." } }
                 if (data.data && data.data.unlocked_link) {
                     // Fix escaped slashes (https:\/\/test.com -> https://test.com)
@@ -978,17 +978,17 @@
                 console.error("[Bypass] Sub2Unlock.com: Network error.", err);
             }
         }
-
+ 
         bypassSub2UnlockCom();
         return;
     }
-
+ 
     // ==========================================
     // SUB2GET.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('sub2get.com')) {
         let bypassed = false;
-
+ 
         const observer = new MutationObserver((mutations, obs) => {
             if (bypassed) return;
             // Look for the element the exact millisecond it's parsed into the DOM
@@ -1005,10 +1005,10 @@
                 }
             }
         });
-
+ 
         // Start observing immediately at document-start
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         // Fallback just in case the script somehow loads late
         if (document.readyState !== 'loading') {
             const linkBtn = document.querySelector('a#updateHiddenUnlocks');
@@ -1024,7 +1024,7 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // GZENX.COM BYPASS LOGIC
     // ==========================================
@@ -1039,17 +1039,17 @@
                 }
             }
         }
-
+ 
         document.addEventListener('DOMContentLoaded', bypassGzenx, { once: true });
         return;
     }
-
+ 
     // ==========================================
     // BSTSHRT.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('bstshrt.com')) {
         const regex = /\\?"finalUrl\\?"\s*:\s*\\?"([^"\\]+)"/;
-
+ 
         function extractAndRedirect(raw) {
             const match = raw?.match(regex);
             if (match?.[1]) {
@@ -1059,10 +1059,10 @@
             }
             return false;
         }
-
+ 
         function hookPush() {
             if (typeof self.__next_f?.push !== 'function') return false;
-
+ 
             const orig = self.__next_f.push;
             self.__next_f.push = function (chunk) {
                 const raw = (Array.isArray(chunk) && typeof chunk[1] === 'string') ? chunk[1] : JSON.stringify(chunk);
@@ -1070,7 +1070,7 @@
             };
             return true;
         }
-
+ 
         if (!hookPush()) {
             try {
                 Object.defineProperty(self, '__next_f', {
@@ -1080,9 +1080,9 @@
                 });
             } catch (_) {}
         }
-
+ 
         function fallback() { extractAndRedirect(document.documentElement.innerHTML); }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', fallback, { once: true });
         } else {
@@ -1090,14 +1090,14 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // IBIN.SITE BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('ibin.site')) {
         const urlParams = new URLSearchParams(window.location.search);
         const id = urlParams.get('id');
-
+ 
         if (id && !window.location.pathname.includes('gateway.php')) {
             console.log("[Bypass] Ibin: Redirecting to gateway...");
             window.location.replace(`https://ibin.site/lock/gateway.php?id=${id}`);
@@ -1114,13 +1114,13 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // VENUSLOCKSCRIPT.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('venuslockscript.com')) {
         console.log("[Bypass] VenusLockScript: Scanning scripts for targetUrl...");
-
+ 
         const observer = new MutationObserver((mutations, obs) => {
             for (const s of document.querySelectorAll('script')) {
                 const match = s.textContent.match(/const\s+targetUrl\s*=\s*["']([^"']+)["']/);
@@ -1134,9 +1134,9 @@
                 }
             }
         });
-
+ 
         observer.observe(document.documentElement, { childList: true, subtree: true });
-
+ 
         if (document.readyState !== 'loading') {
             for (const s of document.querySelectorAll('script')) {
                 const match = s.textContent.match(/const\s+targetUrl\s*=\s*["']([^"']+)["']/);
@@ -1152,30 +1152,30 @@
         }
         return;
     }
-
+ 
     // ==========================================
     // LINKUNLOCKER.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('linkunlocker.com')) {
         if (window.location.pathname.includes('/api/')) return;
-
+ 
         const slug = window.location.pathname.split('/').filter(Boolean)[0];
         if (!slug) return;
-
+ 
         async function bypassLinkUnlocker() {
             try {
                 console.log("[Bypass] LinkUnlocker: Fetching token...");
-
+ 
                 const postRes = await fetch(`https://linkunlocker.com/api/unlock/${slug}`, {
                     method: 'POST',
                     credentials: 'include'
                 });
                 const postData = await postRes.json();
-
+ 
                 if (!postData.token) {
                     return console.error("[Bypass] LinkUnlocker: Failed to get token from API.", postData);
                 }
-
+ 
                 console.log("[Bypass] LinkUnlocker: Token acquired. Redirecting to final URL...");
                 window.stop();
                 window.location.replace(`https://linkunlocker.com/api/unlock/${slug}?t=${encodeURIComponent(postData.token)}`);
@@ -1183,18 +1183,18 @@
                 console.error("[Bypass] LinkUnlocker: Network error.", err);
             }
         }
-
+ 
         bypassLinkUnlocker();
         return;
     }
-
+ 
     // ==========================================
     // LINKZY.SPACE BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('linkzy.space')) {
         const shortCode = window.location.pathname.split('/').filter(Boolean)[1];
         if (!shortCode) return;
-
+ 
         async function bypassLinkzy() {
             try {
                 console.log("[Bypass] Linkzy: Fetching destination from Supabase...");
@@ -1203,9 +1203,9 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ shortCode: shortCode })
                 });
-
+ 
                 const data = await res.json();
-
+ 
                 if (data.destination_url) {
                     console.log("[Bypass] Linkzy: ✅ Unlocked successfully!");
                     window.stop();
@@ -1217,11 +1217,11 @@
                 console.error("[Bypass] Linkzy: Network error.", err);
             }
         }
-
+ 
         bypassLinkzy();
         return;
     }
-
+ 
     // ==========================================
     // GO.LINKIFY.RU BYPASS LOGIC
     // ==========================================
@@ -1229,7 +1229,7 @@
         function handleFirstRedirect() {
             const unlockButton = document.getElementById('unlockgo');
             if (!unlockButton) return null;
-
+ 
             const scripts = document.getElementsByTagName('script');
             for (let script of scripts) {
                 if (script.textContent.includes('skipPush') || script.textContent.includes('get/')) {
@@ -1237,7 +1237,7 @@
                     if (urlMatch) return urlMatch[0];
                 }
             }
-
+ 
             const offerLinks = document.querySelectorAll('.offer-link');
             if (offerLinks.length > 0) {
                 const href = offerLinks[0].getAttribute('href');
@@ -1245,10 +1245,10 @@
                     return href;
                 }
             }
-
+ 
             return null;
         }
-
+ 
         function handleSecondRedirect() {
             const scripts = document.getElementsByTagName('script');
             for (let script of scripts) {
@@ -1259,18 +1259,18 @@
             }
             return null;
         }
-
+ 
         function bypassRedirects() {
             const secondRedirectUrl = handleSecondRedirect();
             const firstRedirectUrl = handleFirstRedirect();
-
+ 
             const finalUrl = secondRedirectUrl || firstRedirectUrl;
             if (finalUrl) {
                 console.log("[Bypass] Linkify: Redirecting to:", finalUrl);
                 window.location.href = finalUrl;
             }
         }
-
+ 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bypassRedirects);
         } else {
@@ -1279,23 +1279,23 @@
         window.addEventListener('load', bypassRedirects);
         return;
     }
-
+ 
     // ==========================================
     // LINKSTERRA.COM BYPASS LOGIC
     // ==========================================
     else if (hostname.includes('linksterra.com')) {
         const slug = window.location.pathname.replace(/^\/l\//, '');
         if (!slug) return;
-
+ 
         async function bypassLinksterra() {
             try {
                 console.log("[Bypass] Linksterra: Fetching redirect URL...");
                 const res = await fetch(`https://linksterra.com/api/locker/${slug}`, {
                     credentials: 'include'
                 });
-
+ 
                 const data = await res.json();
-
+ 
                 if (data.redirectUrl) {
                     console.log("[Bypass] Linksterra: ✅ Unlocked successfully!");
                     window.stop();
@@ -1307,9 +1307,112 @@
                 console.error("[Bypass] Linksterra: Network error.", err);
             }
         }
-
+ 
         bypassLinksterra();
         return;
     }
-
+ 
+    // ==========================================
+    // SUB4UNLOCK.IN BYPASS LOGIC
+    // ==========================================
+    else if (hostname.includes('sub4unlock.in')) {
+        let bypassed = false;
+ 
+        const observer = new MutationObserver((mutations, obs) => {
+            if (bypassed) return;
+ 
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    // The HTML parser adds the <script> tag to the DOM right before executing it.
+                    // This catches it the exact millisecond it's injected.
+                    if (node.nodeName === 'SCRIPT' && node.textContent) {
+                        const match = node.textContent.match(/var\s+my_code_link\s*=\s*['"]([^'"]+)['"]/);
+                        if (match && match[1]) {
+                            bypassed = true;
+                            obs.disconnect();
+                            console.log("[Bypass] Sub4Unlock.in: ✅ Found destination URL!", match[1]);
+                            window.stop();
+                            window.location.replace(match[1]);
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+ 
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        setTimeout(() => observer.disconnect(), 10000);
+        return;
+    }
+ 
+    // ==========================================
+    // SUBS4UNLOCK.ID BYPASS LOGIC
+    // ==========================================
+    else if (hostname.includes('subs4unlock.id')) {
+        function extractAndRedirect() {
+            const textarea = document.querySelector('textarea[name="link"]');
+            if (!textarea || !textarea.value) return false;
+ 
+            try {
+                const data = JSON.parse(textarea.value);
+                if (!data.original) return false;
+ 
+                const params = new URLSearchParams(data.original);
+                for (const [key, value] of params.entries()) {
+                    if (key.startsWith('lnk')) {
+                        const url = decodeURIComponent(atob(value));
+ 
+                        if (url && /^https?:\/\//i.test(url)) {
+                            console.log("[Bypass] Subs4Unlock.id: ✅ Unlocked successfully!", url);
+                            window.stop();
+                            window.location.replace(url);
+                            return true;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("[Bypass] Subs4Unlock.id: Error parsing link data.", e);
+            }
+            return false;
+        }
+        if (extractAndRedirect()) return;
+ 
+        const observer = new MutationObserver(() => {
+            if (extractAndRedirect()) observer.disconnect();
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+ 
+        setTimeout(() => observer.disconnect(), 10000);
+        return;
+    }
+ 
+    // ==========================================
+    // ROBLOXSCRIPTS.GG SOCIAL BYPASS LOGIC
+    // ==========================================
+    else if (hostname.includes('robloxscripts.gg') && window.location.pathname.startsWith('/social/')) {
+        const slug = window.location.pathname.split('/').filter(Boolean).pop();
+        if (!slug) return;
+ 
+        async function bypassRobloxScripts() {
+            try {
+                console.log("[Bypass] RobloxScripts: Fetching target link from API...");
+                const res = await fetch(`https://api.robloxscripts.gg/social/${slug}`);
+                const data = await res.json();
+ 
+                if (data.target_link) {
+                    console.log("[Bypass] RobloxScripts: ✅ Unlocked successfully!", data.target_link);
+                    window.stop();
+                    window.location.replace(data.target_link);
+                } else {
+                    console.error("[Bypass] RobloxScripts: Failed to find target_link in response.", data);
+                }
+            } catch (err) {
+                console.error("[Bypass] RobloxScripts: Network error.", err);
+            }
+        }
+ 
+        bypassRobloxScripts();
+        return;
+    }
+ 
 })();
