@@ -19,6 +19,7 @@
 - lockr.net ⏱️ (20s+)
 - rekonise.com ⏱️ (up to 35s)
 - risub.com
+- robloxscripts.gg/social/
 - socialwolvez.com (scwz.me)
 - sub2get.com
 - sub2unlock.com
@@ -27,8 +28,10 @@
 - sub2unlock.me
 - sub2unlock.pro
 - sub4unlock.com
+- sub4unlock.in
 - sub4unlock.io
 - subforunlock.com ⏱️ (30s)
+- subs4unlock.id
 - subs4unlock.net
 - subtounlock.com
 - subunlock.com
